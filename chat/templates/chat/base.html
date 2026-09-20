@@ -171,6 +171,11 @@
                 <a href="{% url 'chat:room_list' %}">Rooms</a>
                 <a href="{% url 'chat:news' %}">News</a>
                 <a href="{% url 'chat:friends_home' %}">Friends</a>
+                {% if user.is_staff %}
+    <a href="/admin/" style="color: #fbbf24;">⚙ Admin</a>
+{% endif %}
+
+<a href="{% url 'chat:profile' user.username %}" ...>{{ user.username }}</a>
 
                 <!-- Notification bell -->
                 <div id="notif-bell">
