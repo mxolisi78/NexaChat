@@ -1,0 +1,197 @@
+﻿{% extends 'chat/base.html' %}
+
+{% block title %}{{ other_user.username }} — Messages{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px; width: 100%;">
+    <!-- Header -->
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+        <a href="{% url 'chat:dm_inbox' %}" style="color: #a78bfa; text-decoration: none; font-size: 0.875rem;">← Inbox</a>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+        <div class="avatar">{{ other_user.username|first|upper }}</div>
+        <div>
+            <a href="{% url 'chat:profile' other_user.username %}" style="color: #e5e7eb; text-decoration: none; font-weight: 600; font-size: 1.1rem;">{{ other_user.username }}</a>
+            <div id="connection-status" style="font-size: 0.7rem; color: #fbbf24;">⚡ Connecting...</div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div id="message-log" class="message-log">
+        {% for msg in messages %}
+            <div class="message-row{% if msg.sender == user %} own{% endif %}">
+                <div class="message-header">
+                    <strong style="color: {% if msg.sender == user %}#c4b5fd{% else %}#a5b4fc{% endif %};">
+                        {{ msg.sender.username }}{% if msg.sender == user %} (you){% endif %}
+                    </strong>
+                    <span class="message-time">{{ msg.timestamp|date:"M d, H:i" }}</span>
+                </div>
+                <div class="message-body">{{ msg.content }}</div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Composer -->
+    <form id="message-form" style="display: flex; gap: 0.5rem; align-items: stretch; margin-top: 1rem;">
+        {% csrf_token %}
+        <input type="text" id="message-input" class="form-input" placeholder="Type a message... (Enter to send)" autocomplete="off" style="margin-bottom: 0; flex: 1;">
+        <button type="submit" id="send-btn" class="btn" style="width: auto; padding: 0.75rem 1.5rem;">Send</button>
+    </form>
+</div>
+
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .message-log {
+        background: rgba(30, 27, 75, 0.5);
+        border: 1px solid rgba(139, 92, 246, 0.25);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        min-height: 300px;
+        max-height: 55vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+    .message-row {
+        margin-bottom: 1.25rem;
+        animation: fadeIn 0.25s ease-out;
+        max-width: 75%;
+        align-self: flex-start;
+    }
+    .message-row.own {
+        align-self: flex-end;
+        text-align: right;
+    }
+    .message-header {
+        display: flex;
+        align-items: baseline;
+        gap: 0.75rem;
+        margin-bottom: 0.25rem;
+    }
+    .message-row.own .message-header { justify-content: flex-end; }
+    .message-time { font-size: 0.75rem; color: #6b7280; }
+    .message-body {
+        color: #e5e7eb;
+        line-height: 1.5;
+        word-wrap: break-word;
+        background: rgba(15, 10, 31, 0.5);
+        border-radius: 0.75rem;
+        padding: 0.6rem 0.9rem;
+        border: 1px solid rgba(139, 92, 246, 0.15);
+        text-align: left;
+    }
+    .message-row.own .message-body {
+        background: rgba(139, 92, 246, 0.18);
+        border-color: rgba(139, 92, 246, 0.35);
+    }
+    .avatar {
+        width: 44px; height: 44px; border-radius: 50%;
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-weight: 700; font-size: 1rem;
+    }
+</style>
+
+<script>
+(function() {
+    const otherUser = "{{ other_user.username }}";
+    const currentUser = "{{ user.username }}";
+    const log = document.getElementById('message-log');
+    const form = document.getElementById('message-form');
+    const input = document.getElementById('message-input');
+    const status = document.getElementById('connection-status');
+    const sendBtn = document.getElementById('send-btn');
+
+    const proto = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const wsUrl = proto + window.location.host + '/ws/dm/' + otherUser + '/';
+
+    const socket = new WebSocket(wsUrl);
+
+    function setConnected(connected) {
+        if (connected) {
+            status.style.color = '#4ade80';
+            status.textContent = '● Connected';
+            sendBtn.disabled = false;
+            input.disabled = false;
+        } else {
+            status.style.color = '#f87171';
+            status.textContent = '● Disconnected — refresh to reconnect';
+            sendBtn.disabled = true;
+            input.disabled = true;
+        }
+    }
+
+    socket.onopen = function() { setConnected(true); log.scrollTop = log.scrollHeight; };
+    socket.onclose = function() { setConnected(false); };
+    socket.onerror = function() { setConnected(false); };
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'dm_message') {
+            appendMessage(data.sender, data.message, data.timestamp);
+        }
+    };
+
+    function appendMessage(username, text, timestamp) {
+        const isOwn = username === currentUser;
+        const row = document.createElement('div');
+        row.className = 'message-row' + (isOwn ? ' own' : '');
+
+        const header = document.createElement('div');
+        header.className = 'message-header';
+
+        const name = document.createElement('strong');
+        name.style.color = isOwn ? '#c4b5fd' : '#a5b4fc';
+        name.textContent = username + (isOwn ? ' (you)' : '');
+
+        const time = document.createElement('span');
+        time.className = 'message-time';
+        time.textContent = timestamp;
+
+        header.appendChild(name);
+        header.appendChild(time);
+
+        const body = document.createElement('div');
+        body.className = 'message-body';
+        body.textContent = text;
+
+        row.appendChild(header);
+        row.appendChild(body);
+
+        log.appendChild(row);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        sendMessage();
+    });
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+        if (socket.readyState !== WebSocket.OPEN) {
+            alert('Not connected. Please refresh.');
+            return;
+        }
+        socket.send(JSON.stringify({ 'message': text }));
+        input.value = '';
+        input.focus();
+    }
+
+    setConnected(false);
+    log.scrollTop = log.scrollHeight;
+})();
+</script>
+{% endblock %}

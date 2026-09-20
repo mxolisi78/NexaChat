@@ -1,0 +1,22 @@
+﻿{% extends 'chat/base.html' %}
+
+{% block title %}Account Settings — NexaChat{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 500px;">
+    <h1>Account Settings</h1>
+    <p class="sub">Update your email and name.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.email }}
+        {{ form.first_name }}
+        {{ form.last_name }}
+        <button type="submit" class="btn">Save Changes</button>
+    </form>
+
+    <p class="alt-link">
+        <a href="{% url 'chat:change_password' %}">Change password →</a>
+    </p>
+</div>
+{% endblock %}

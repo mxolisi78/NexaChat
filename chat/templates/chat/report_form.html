@@ -1,0 +1,40 @@
+{% extends 'chat/base.html' %}
+
+{% block title %}Report — NexaChat{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 540px;">
+    <h1>⚠ Report</h1>
+    <p class="sub">Reporting: <strong style="color:#c4b5fd;">{{ target_label }}</strong></p>
+
+    {% if target_preview %}
+        <div style="background: rgba(15, 10, 31, 0.6); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 0.5rem; padding: 0.85rem 1rem; margin-bottom: 1.5rem; font-size: 0.85rem; color: #a5b4fc;">
+            {{ target_preview }}
+        </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <label style="display: block; font-size: 0.75rem; color: #818cf8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Reason</label>
+        <select name="reason" class="form-input" required>
+            {% for value, label in reasons %}
+                <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+
+        <label style="display: block; font-size: 0.75rem; color: #818cf8; text-transform: uppercase; letter-spacing: 0.05em; margin: 1rem 0 0.5rem;">Additional details (optional)</label>
+        <textarea name="details" class="form-input" rows="4" maxlength="500" placeholder="Explain what's wrong..." style="resize: vertical; font-family: inherit;"></textarea>
+
+        <button type="submit" class="btn" style="background: linear-gradient(90deg, #dc2626, #b91c1c); margin-top: 1rem;">Submit Report</button>
+    </form>
+
+    <p class="alt-link">
+        {% if cancel_arg %}
+            <a href="{% url cancel_url cancel_arg %}">Cancel</a>
+        {% else %}
+            <a href="{% url cancel_url %}">Cancel</a>
+        {% endif %}
+    </p>
+</div>
+{% endblock %}

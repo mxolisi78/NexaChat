@@ -1,0 +1,21 @@
+﻿{% extends 'chat/base.html' %}
+
+{% block title %}Login — NexaChat{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Welcome back</h1>
+    <p class="sub">Log in to continue chatting.</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="text" name="username" class="form-input" placeholder="Username" required autofocus>
+        <input type="password" name="password" class="form-input" placeholder="Password" required>
+        <button type="submit" class="btn">Log In</button>
+    </form>
+
+    <p class="alt-link">
+        New to NexaChat? <a href="{% url 'chat:signup' %}">Create an account</a>
+    </p>
+</div>
+{% endblock %}

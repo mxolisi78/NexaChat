@@ -1,0 +1,148 @@
+﻿{% extends 'chat/base.html' %}
+
+{% block title %}Friends — NexaChat{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; width: 100%;">
+    <div style="margin-bottom: 2rem;">
+        <h1 style="font-size: 2rem; margin-bottom: 0.25rem;">👥 Friends</h1>
+        <p style="color: #a5b4fc; font-size: 0.95rem;">Manage your connections on NexaChat.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+
+        <!-- LEFT COLUMN -->
+        <div>
+            <!-- Incoming requests -->
+            <h2 style="font-size: 1.15rem; margin-bottom: 1rem;">
+                Incoming Requests
+                {% if incoming %}<span style="background: #8b5cf6; color: #fff; font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 9999px; margin-left: 0.5rem;">{{ incoming|length }}</span>{% endif %}
+            </h2>
+
+            {% if incoming %}
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem;">
+                    {% for req in incoming %}
+                        <div class="mini-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div class="avatar">{{ req.from_user.username|first|upper }}</div>
+                                    <div>
+                                        <a href="{% url 'chat:profile' req.from_user.username %}" style="color: #e5e7eb; text-decoration: none; font-weight: 600;">{{ req.from_user.username }}</a>
+                                        <div style="font-size: 0.75rem; color: #818cf8;">{{ req.created_at|timesince }} ago</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 0.35rem;">
+                                    <a href="{% url 'chat:accept_friend_request' req.id %}" class="btn" style="width: auto; padding: 0.4rem 0.9rem; font-size: 0.8rem; text-decoration: none;">Accept</a>
+                                    <a href="{% url 'chat:decline_friend_request' req.id %}" class="btn" style="width: auto; padding: 0.4rem 0.9rem; font-size: 0.8rem; text-decoration: none; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4);">Decline</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-box" style="margin-bottom: 2rem;">
+                    <p style="color: #818cf8; font-size: 0.875rem;">No incoming requests.</p>
+                </div>
+            {% endif %}
+
+            <!-- Friends list -->
+            <h2 style="font-size: 1.15rem; margin-bottom: 1rem;">Your Friends ({{ friends|length }})</h2>
+
+            {% if friends %}
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    {% for friend in friends %}
+                        <div class="mini-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div class="avatar">{{ friend.username|first|upper }}</div>
+                                    <a href="{% url 'chat:profile' friend.username %}" style="color: #e5e7eb; text-decoration: none; font-weight: 600;">{{ friend.username }}</a>
+                                </div>
+                                <div style="display: flex; gap: 0.35rem;">
+                                    <a href="{% url 'chat:dm' friend.username %}" class="btn" style="width: auto; padding: 0.4rem 0.9rem; font-size: 0.8rem; text-decoration: none;">Message</a>
+                                    <a href="{% url 'chat:remove_friend' friend.username %}" class="btn" style="width: auto; padding: 0.4rem 0.9rem; font-size: 0.8rem; text-decoration: none; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3);">Remove</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-box">
+                    <p style="color: #818cf8; font-size: 0.875rem;">You don't have any friends yet.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div>
+            <!-- Sent requests -->
+            <h2 style="font-size: 1.15rem; margin-bottom: 1rem;">Sent Requests</h2>
+
+            {% if outgoing %}
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 2rem;">
+                    {% for req in outgoing %}
+                        <div class="mini-card" style="padding: 0.75rem 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <a href="{% url 'chat:profile' req.to_user.username %}" style="color: #c4b5fd; text-decoration: none; font-size: 0.9rem;">{{ req.to_user.username }}</a>
+                                <span style="font-size: 0.7rem; color: #818cf8;">pending</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-box" style="margin-bottom: 2rem;">
+                    <p style="color: #818cf8; font-size: 0.875rem;">No pending sent requests.</p>
+                </div>
+            {% endif %}
+
+            <!-- Suggestions -->
+            <h2 style="font-size: 1.15rem; margin-bottom: 1rem;">People you may know</h2>
+
+            {% if suggestions %}
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    {% for person in suggestions %}
+                        <div class="mini-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div class="avatar">{{ person.username|first|upper }}</div>
+                                    <a href="{% url 'chat:profile' person.username %}" style="color: #e5e7eb; text-decoration: none; font-weight: 600;">{{ person.username }}</a>
+                                </div>
+                                <a href="{% url 'chat:send_friend_request' person.username %}" class="btn" style="width: auto; padding: 0.4rem 0.9rem; font-size: 0.8rem; text-decoration: none;">+ Add</a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-box">
+                    <p style="color: #818cf8; font-size: 0.875rem;">No suggestions right now.</p>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+
+<style>
+    .mini-card {
+        background: rgba(30, 27, 75, 0.5);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        border-radius: 0.6rem;
+        padding: 0.85rem 1rem;
+    }
+    .empty-box {
+        background: rgba(30, 27, 75, 0.35);
+        border: 1px dashed rgba(139, 92, 246, 0.3);
+        border-radius: 0.6rem;
+        padding: 1.5rem 1rem;
+        text-align: center;
+    }
+    .avatar {
+        width: 38px; height: 38px; border-radius: 50%;
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-weight: 700; font-size: 0.95rem;
+    }
+    @media (max-width: 800px) {
+        div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
+    }
+</style>
+{% endblock %}

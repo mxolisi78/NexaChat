@@ -1,0 +1,166 @@
+{% extends 'chat/base.html' %}
+
+{% block title %}{% if query %}Search: {{ query }}{% else %}Search{% endif %} — NexaChat{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; width: 100%;">
+
+    <div style="margin-bottom: 1.5rem;">
+        <h1 style="font-size: 2rem; margin-bottom: 0.25rem;">🔎 Search</h1>
+        <p style="color: #a5b4fc; font-size: 0.95rem;">
+            {% if query %}Results for "<strong style="color:#c4b5fd;">{{ query }}</strong>"{% else %}Find people, rooms, and posts.{% endif %}
+        </p>
+    </div>
+
+    <form method="get" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+        <input type="text" name="q" value="{{ query }}" class="form-input" placeholder="Search NexaChat..." style="margin-bottom: 0; flex: 1;" autofocus>
+        <button type="submit" class="btn" style="width: auto; padding: 0.75rem 1.5rem;">Search</button>
+    </form>
+
+    {% if query %}
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <a href="?q={{ query }}&type=all" class="tab {% if search_type == 'all' %}active{% endif %}">All</a>
+            <a href="?q={{ query }}&type=users" class="tab {% if search_type == 'users' %}active{% endif %}">Users ({{ user_count }})</a>
+            <a href="?q={{ query }}&type=rooms" class="tab {% if search_type == 'rooms' %}active{% endif %}">Rooms ({{ room_count }})</a>
+            <a href="?q={{ query }}&type=posts" class="tab {% if search_type == 'posts' %}active{% endif %}">Posts ({{ post_count }})</a>
+        </div>
+
+        {% if search_type == 'all' or search_type == 'users' %}
+            {% if users %}
+                <h2 style="font-size: 1.1rem; margin-bottom: 0.75rem;">Users</h2>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 2rem;">
+                    {% for u in users %}
+                        <a href="{% url 'chat:profile' u.username %}" style="text-decoration: none; color: inherit;">
+                            <div class="result-card">
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    {% if u.profile.avatar %}
+                                        <img src="{{ u.profile.avatar.url }}" alt="" class="avatar-img">
+                                    {% else %}
+                                        <div class="avatar">{{ u.username|first|upper }}</div>
+                                    {% endif %}
+                                    <div>
+                                        <strong style="color: #e5e7eb;">{{ u.username }}</strong>
+                                        {% if u.profile.bio %}
+                                            <div style="font-size: 0.8rem; color: #a5b4fc;">{{ u.profile.bio|truncatechars:60 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endif %}
+
+        {% if search_type == 'all' or search_type == 'rooms' %}
+            {% if rooms %}
+                <h2 style="font-size: 1.1rem; margin-bottom: 0.75rem;">Rooms</h2>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 2rem;">
+                    {% for room in rooms %}
+                        <a href="{% url 'chat:room_detail' room.slug %}" style="text-decoration: none; color: inherit;">
+                            <div class="result-card">
+                                <strong style="color: #e5e7eb;"># {{ room.name }}</strong>
+                                {% if room.description %}
+                                    <div style="font-size: 0.8rem; color: #a5b4fc;">{{ room.description|truncatechars:80 }}</div>
+                                {% endif %}
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endif %}
+
+        {% if search_type == 'all' or search_type == 'posts' %}
+            {% if posts %}
+                <h2 style="font-size: 1.1rem; margin-bottom: 0.75rem;">Posts</h2>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2rem;">
+                    {% for post in posts %}
+                        <a href="{% url 'chat:feed' %}#post-{{ post.id }}" style="text-decoration: none; color: inherit;">
+                            <div class="result-card">
+                                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                                    {% if post.author.profile.avatar %}
+                                        <img src="{{ post.author.profile.avatar.url }}" alt="" class="avatar-img-sm">
+                                    {% else %}
+                                        <div class="avatar-sm">{{ post.author.username|first|upper }}</div>
+                                    {% endif %}
+                                    <strong style="color: #c4b5fd; font-size: 0.9rem;">{{ post.author.username }}</strong>
+                                    <span style="font-size: 0.7rem; color: #6b7280;">· {{ post.created_at|timesince }} ago</span>
+                                </div>
+                                <p style="color: #e5e7eb; line-height: 1.5;">{{ post.content|truncatechars:200 }}</p>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endif %}
+
+        {% if not user_count and not room_count and not post_count %}
+            <div class="empty-box" style="margin-top: 2rem;">
+                <p style="color: #a5b4fc;">No results for "<strong>{{ query }}</strong>".</p>
+                <p style="color: #818cf8; font-size: 0.85rem; margin-top: 0.5rem;">Try a different keyword.</p>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="empty-box">
+            <p style="color: #a5b4fc;">Start typing to search.</p>
+            <p style="color: #818cf8; font-size: 0.85rem; margin-top: 0.5rem;">Find users, chat rooms, and posts.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .tab {
+        padding: 0.5rem 1rem;
+        background: rgba(30, 27, 75, 0.5);
+        border: 1px solid rgba(139, 92, 246, 0.25);
+        border-radius: 9999px;
+        color: #c4b5fd;
+        text-decoration: none;
+        font-size: 0.875rem;
+    }
+    .tab:hover { border-color: rgba(139, 92, 246, 0.6); color: #fff; }
+    .tab.active { background: linear-gradient(90deg, #8b5cf6, #6366f1); color: #fff; border-color: transparent; }
+
+    .result-card {
+        background: rgba(30, 27, 75, 0.5);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        border-radius: 0.6rem;
+        padding: 1rem 1.25rem;
+        transition: transform 0.15s, border-color 0.15s;
+    }
+    .result-card:hover {
+        transform: translateX(2px);
+        border-color: rgba(139, 92, 246, 0.5);
+    }
+    .avatar {
+        width: 40px; height: 40px; border-radius: 50%;
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-weight: 700; font-size: 0.95rem;
+        flex-shrink: 0;
+    }
+    .avatar-img {
+        width: 40px; height: 40px; border-radius: 50%;
+        object-fit: cover; border: 2px solid rgba(139, 92, 246, 0.5);
+        flex-shrink: 0;
+    }
+    .avatar-sm {
+        width: 28px; height: 28px; border-radius: 50%;
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-weight: 700; font-size: 0.75rem;
+        flex-shrink: 0;
+    }
+    .avatar-img-sm {
+        width: 28px; height: 28px; border-radius: 50%;
+        object-fit: cover; flex-shrink: 0;
+    }
+    .empty-box {
+        background: rgba(30, 27, 75, 0.35);
+        border: 1px dashed rgba(139, 92, 246, 0.3);
+        border-radius: 0.6rem;
+        padding: 2rem 1rem;
+        text-align: center;
+    }
+</style>
+{% endblock %}

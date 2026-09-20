@@ -1,0 +1,341 @@
+﻿{% extends 'chat/base.html' %}
+
+{% block title %}Feed — NexaChat{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px; width: 100%;">
+    <div style="margin-bottom: 1.5rem;">
+        <h1 style="font-size: 2rem; margin-bottom: 0.25rem;">🏠 Feed</h1>
+        <p style="color: #a5b4fc; font-size: 0.95rem;">See what your friends are sharing.</p>
+    </div>
+
+    <!-- ─────────── STORIES BAR ─────────── -->
+    <div class="stories-bar">
+        <!-- "Add story" tile -->
+        <a href="{% url 'chat:create_story' %}" class="story-circle add-story">
+            <div class="story-avatar add-avatar">+</div>
+            <span class="story-name">Add Story</span>
+        </a>
+
+        {% for group in story_groups %}
+            <button class="story-circle" onclick="openStoryViewer('{{ group.author.username }}')">
+                <div class="story-avatar{% if group.is_self %} self{% endif %}">
+                    {{ group.author.username|first|upper }}
+                </div>
+                <span class="story-name">
+                    {% if group.is_self %}You{% else %}{{ group.author.username }}{% endif %}
+                </span>
+            </button>
+            <script type="application/json" id="stories-{{ group.author.username }}">
+                [
+                    {% for story in group.stories %}
+                        {
+                            "id": {{ story.id }},
+                            "content": {{ story.content|default:""|escapejs|safe }},
+                            "image": {% if story.image %}"{{ story.image.url }}"{% else %}null{% endif %},
+                            "author": "{{ story.author.username }}",
+                            "created": "{{ story.created_at|timesince }} ago",
+                            "is_self": {% if group.is_self %}true{% else %}false{% endif %}
+                        }{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ]
+            </script>
+        {% endfor %}
+    </div>
+
+    <!-- ─────────── COMPOSER ─────────── -->
+    <div class="composer" style="margin-top: 1.5rem;">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+                <div class="avatar">{{ user.username|first|upper }}</div>
+                <div style="flex: 1;">
+                    {{ form.content }}
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem;">
+                        <label for="{{ form.image.id_for_label }}" style="cursor: pointer; font-size: 0.85rem; color: #a78bfa;">📷 Add image</label>
+<input type="file" name="{{ form.image.name }}" id="{{ form.image.id_for_label }}" accept="image/*" style="display: none;">
+                        <button type="submit" class="btn" style="width: auto; padding: 0.5rem 1.5rem;">Post</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- ─────────── POSTS ─────────── -->
+    {% if posts %}
+        <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem;">
+            {% for post in posts %}
+                <div class="post-card" id="post-{{ post.id }}">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <a href="{% url 'chat:profile' post.author.username %}" style="text-decoration: none;">
+                                <div class="avatar">{{ post.author.username|first|upper }}</div>
+                            </a>
+                            <div>
+                                <a href="{% url 'chat:profile' post.author.username %}" style="color: #e5e7eb; text-decoration: none; font-weight: 600;">{{ post.author.username }}</a>
+                                <div style="font-size: 0.7rem; color: #818cf8;">{{ post.created_at|timesince }} ago</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.75rem;">
+    {% if post.author == user %}
+        <a href="{% url 'chat:delete_post' post.id %}" onclick="return confirm('Delete this post?');" style="color: #f87171; font-size: 0.75rem; text-decoration: none;">Delete</a>
+    {% else %}
+        <a href="{% url 'chat:report_post' post.id %}" style="color: #fbbf24; font-size: 0.75rem; text-decoration: none;">⚠ Report</a>
+    {% endif %}
+</div>
+                    </div>
+
+                    <p style="color: #e5e7eb; line-height: 1.6; white-space: pre-wrap; margin-bottom: 1rem;">{{ post.content }}</p>
+
+                    {% if post.image %}
+    <img src="{{ post.image.url }}"
+         alt=""
+         style="width: 100%; border-radius: 0.5rem; margin-bottom: 1rem;"
+         onerror="this.style.display='none'">
+{% endif %}
+
+                    <div style="display: flex; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid rgba(139, 92, 246, 0.15);">
+                        <form method="post" action="{% url 'chat:toggle_like' post.id %}" style="margin: 0;">
+                            {% csrf_token %}
+                            <button type="submit" style="background: none; border: none; cursor: pointer; color: {% if post.id in liked_ids %}#ec4899{% else %}#a5b4fc{% endif %}; font-size: 0.85rem; padding: 0; display: flex; align-items: center; gap: 0.35rem;">
+                                {% if post.id in liked_ids %}❤{% else %}♡{% endif %} {{ post.like_count }}
+                            </button>
+                        </form>
+                        <span style="color: #a5b4fc; font-size: 0.85rem;">💬 {{ post.comment_count }}</span>
+                    </div>
+
+                    {% if post.comments.all %}
+                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(139, 92, 246, 0.15); display: flex; flex-direction: column; gap: 0.75rem;">
+                            {% for comment in post.comments.all %}
+                                <div style="display: flex; gap: 0.75rem; font-size: 0.875rem;">
+                                    <div class="avatar-sm">{{ comment.author.username|first|upper }}</div>
+                                    <div style="flex: 1;">
+                                        <div>
+                                            <a href="{% url 'chat:profile' comment.author.username %}" style="color: #c4b5fd; text-decoration: none; font-weight: 600; font-size: 0.8rem;">{{ comment.author.username }}</a>
+                                            <span style="font-size: 0.7rem; color: #6b7280;"> · {{ comment.created_at|timesince }} ago</span>
+                                        </div>
+                                        <p style="color: #e5e7eb; margin-top: 0.15rem;">{{ comment.content }}</p>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <form method="post" action="{% url 'chat:add_comment' post.id %}" style="margin-top: 0.75rem;">
+    {% csrf_token %}
+    <input type="text" name="content" class="form-input" placeholder="Write a comment..." style="margin-bottom: 0; font-size: 0.85rem; padding: 0.5rem 0.85rem;" required>
+</form>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-box" style="margin-top: 1.5rem;">
+            <p style="color: #a5b4fc; margin-bottom: 0.5rem;">No posts yet.</p>
+            <p style="color: #818cf8; font-size: 0.85rem;">Be the first to share something!</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- ─────────── STORY VIEWER MODAL ─────────── -->
+<div id="story-viewer" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="width: 100%; max-width: 420px; padding: 1rem;">
+        <!-- Progress bar -->
+        <div style="display: flex; gap: 0.25rem; margin-bottom: 1rem;">
+            <div id="progress-fill" style="height: 3px; background: #fff; border-radius: 2px; flex: 1; transform-origin: left; transition: transform linear;"></div>
+        </div>
+
+        <div style="background: rgba(30, 27, 75, 0.9); border-radius: 0.75rem; overflow: hidden; min-height: 500px; position: relative;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; padding: 1rem;">
+                <div id="sv-avatar" class="story-avatar" style="width: 36px; height: 36px; font-size: 0.85rem;"></div>
+                <div style="flex: 1;">
+                    <div id="sv-author" style="color: #fff; font-weight: 600;"></div>
+                    <div id="sv-time" style="font-size: 0.7rem; color: #818cf8;"></div>
+                </div>
+                <button onclick="closeStoryViewer()" style="background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer;">×</button>
+            </div>
+
+            <div id="sv-image-container" style="display: none;">
+                <img id="sv-image" src="" alt="" style="width: 100%; max-height: 400px; object-fit: cover;">
+            </div>
+
+            <div id="sv-content" style="padding: 1.5rem; color: #e5e7eb; font-size: 1.1rem; text-align: center; line-height: 1.5;"></div>
+
+            <div id="sv-controls" style="position: absolute; inset: auto 0 0 0; display: flex; justify-content: space-between; padding: 0.75rem;">
+                <button onclick="prevStory()" style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;">← Prev</button>
+                <button onclick="nextStory()" style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer;">Next →</button>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 1rem; font-size: 0.75rem; color: #818cf8;">
+            Click outside or press ESC to close
+        </div>
+    </div>
+</div>
+
+<style>
+    .stories-bar {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding: 1rem 0.25rem;
+        background: rgba(30, 27, 75, 0.35);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        border-radius: 0.75rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    .stories-bar::-webkit-scrollbar { height: 6px; }
+    .stories-bar::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.4); border-radius: 3px; }
+    .story-circle {
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0;
+        color: inherit;
+        flex-shrink: 0;
+        text-decoration: none;
+    }
+    .story-avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #8b5cf6, #ec4899);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.15rem;
+        border: 3px solid #0f0a1f;
+        outline: 2px solid #8b5cf6;
+        transition: transform 0.15s;
+    }
+    .story-avatar.self { background: linear-gradient(135deg, #6366f1, #a78bfa); }
+    .story-circle:hover .story-avatar { transform: scale(1.06); }
+    .story-avatar.add-avatar {
+        background: rgba(30, 27, 75, 0.8);
+        border: 2px dashed rgba(139, 92, 246, 0.6);
+        outline: none;
+        color: #a78bfa;
+        font-size: 1.5rem;
+    }
+    .story-name {
+        font-size: 0.7rem;
+        color: #c4b5fd;
+        max-width: 60px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .composer {
+        background: rgba(30, 27, 75, 0.55);
+        border: 1px solid rgba(139, 92, 246, 0.25);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+    }
+    .post-card {
+        background: rgba(30, 27, 75, 0.5);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+    }
+    .avatar {
+        width: 40px; height: 40px; border-radius: 50%;
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-weight: 700; font-size: 0.95rem;
+        flex-shrink: 0;
+    }
+    .avatar-sm {
+        width: 28px; height: 28px; border-radius: 50%;
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-weight: 700; font-size: 0.7rem;
+        flex-shrink: 0;
+    }
+    .empty-box {
+        background: rgba(30, 27, 75, 0.35);
+        border: 1px dashed rgba(139, 92, 246, 0.3);
+        border-radius: 0.6rem;
+        padding: 2rem 1rem;
+        text-align: center;
+    }
+</style>
+
+<script>
+let currentStories = [];
+let currentIndex = 0;
+let progressTimer = null;
+
+function openStoryViewer(username) {
+    const el = document.getElementById('stories-' + username);
+    if (!el) return;
+    currentStories = JSON.parse(el.textContent);
+    if (!currentStories.length) return;
+    currentIndex = 0;
+    document.getElementById('story-viewer').style.display = 'flex';
+    renderStory();
+}
+
+function closeStoryViewer() {
+    document.getElementById('story-viewer').style.display = 'none';
+    if (progressTimer) clearTimeout(progressTimer);
+}
+
+function renderStory() {
+    const story = currentStories[currentIndex];
+    if (!story) { closeStoryViewer(); return; }
+
+    document.getElementById('sv-avatar').textContent = story.author[0].toUpperCase();
+    document.getElementById('sv-author').textContent = story.author;
+    document.getElementById('sv-time').textContent = story.created;
+
+    const imgContainer = document.getElementById('sv-image-container');
+    const img = document.getElementById('sv-image');
+    if (story.image) {
+        img.src = story.image;
+        imgContainer.style.display = 'block';
+    } else {
+        imgContainer.style.display = 'none';
+    }
+
+    const content = document.getElementById('sv-content');
+    content.textContent = story.content || '';
+
+    // Progress bar animation (5s per story)
+    const fill = document.getElementById('progress-fill');
+    fill.style.transition = 'none';
+    fill.style.transform = 'scaleX(0)';
+    void fill.offsetWidth;
+    fill.style.transition = 'transform 5s linear';
+    fill.style.transform = 'scaleX(1)';
+
+    if (progressTimer) clearTimeout(progressTimer);
+    progressTimer = setTimeout(nextStory, 5000);
+}
+
+function nextStory() {
+    currentIndex++;
+    if (currentIndex >= currentStories.length) { closeStoryViewer(); return; }
+    renderStory();
+}
+
+function prevStory() {
+    if (currentIndex > 0) { currentIndex--; renderStory(); }
+}
+
+document.getElementById('story-viewer').addEventListener('click', function(e) {
+    if (e.target === this) closeStoryViewer();
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeStoryViewer();
+    if (e.key === 'ArrowRight') nextStory();
+    if (e.key === 'ArrowLeft') prevStory();
+});
+</script>
+{% endblock %}

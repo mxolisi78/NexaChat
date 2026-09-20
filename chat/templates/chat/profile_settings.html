@@ -1,0 +1,43 @@
+﻿{% extends 'chat/base.html' %}
+
+{% block title %}Profile Settings — NexaChat{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 500px;">
+    <h1>Profile Settings</h1>
+    <p class="sub">Update your avatar, bio, and location.</p>
+
+    {% if profile.avatar %}
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+            <img src="{{ profile.avatar.url }}" alt="" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(139, 92, 246, 0.5);">
+        </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <label style="display: block; font-size: 0.75rem; color: #818cf8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">{{ form.avatar.label }}</label>
+        {{ form.avatar }}
+
+        <label style="display: block; font-size: 0.75rem; color: #818cf8; text-transform: uppercase; letter-spacing: 0.05em; margin: 1rem 0 0.5rem;">Bio</label>
+        {{ form.bio }}
+
+        <label style="display: block; font-size: 0.75rem; color: #818cf8; text-transform: uppercase; letter-spacing: 0.05em; margin: 1rem 0 0.5rem;">Location</label>
+        {{ form.location }}
+
+        {% if form.errors %}
+            <ul class="errorlist" style="margin-top: 1rem;">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}<li>{{ field }}: {{ error }}</li>{% endfor %}
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <button type="submit" class="btn" style="margin-top: 1.5rem;">Save Changes</button>
+    </form>
+
+    <p class="alt-link">
+        <a href="{% url 'chat:account_settings' %}">Account settings →</a>
+    </p>
+</div>
+{% endblock %}

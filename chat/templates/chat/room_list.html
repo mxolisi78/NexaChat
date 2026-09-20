@@ -1,0 +1,43 @@
+﻿{% extends 'chat/base.html' %}
+
+{% block title %}Rooms — NexaChat{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; width: 100%;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 1rem; flex-wrap: wrap;">
+        <div>
+            <h1 style="font-size: 2rem; margin-bottom: 0.25rem;">Chat Rooms</h1>
+            <p style="color: #a5b4fc; font-size: 0.95rem;">Pick a room or create your own.</p>
+        </div>
+        <a href="{% url 'chat:room_create' %}" class="btn" style="width: auto; padding: 0.75rem 1.5rem; text-decoration: none; display: inline-block;">+ New Room</a>
+    </div>
+
+    {% if rooms %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem;">
+            {% for room in rooms %}
+                <a href="{% url 'chat:room_detail' room.slug %}" style="text-decoration: none; color: inherit;">
+                    <div class="room-card" style="background: rgba(30, 27, 75, 0.5); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 0.75rem; padding: 1.5rem; transition: transform 0.15s, border-color 0.15s; cursor: pointer; height: 100%;">
+                        <h2 style="font-size: 1.15rem; margin-bottom: 0.5rem;"># {{ room.name }}</h2>
+                        <p style="font-size: 0.875rem; color: #a5b4fc; margin-bottom: 1rem; min-height: 2.5em;">{{ room.description|default:"No description" }}</p>
+                        <div style="font-size: 0.75rem; color: #818cf8;">Created by {{ room.created_by.username }}</div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 3rem; background: rgba(30, 27, 75, 0.4); border-radius: 0.75rem; border: 1px dashed rgba(139, 92, 246, 0.3);">
+            <p style="color: #a5b4fc;">No rooms yet.</p>
+            <p style="color: #818cf8; font-size: 0.875rem; margin-top: 0.5rem;">
+                <a href="{% url 'chat:room_create' %}" style="color: #a78bfa;">Create the first one →</a>
+            </p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .room-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(139, 92, 246, 0.6) !important;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,78 @@
+﻿{% extends 'chat/base.html' %}
+
+{% block title %}Messages — NexaChat{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px; width: 100%;">
+    <div style="margin-bottom: 2rem;">
+        <h1 style="font-size: 2rem; margin-bottom: 0.25rem;">💬 Messages</h1>
+        <p style="color: #a5b4fc; font-size: 0.95rem;">
+            {% if total_unread %}{{ total_unread }} unread message{{ total_unread|pluralize }}{% else %}All caught up{% endif %}
+        </p>
+    </div>
+
+    {% if conversations %}
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            {% for c in conversations %}
+                <a href="{% url 'chat:dm' c.user.username %}" style="text-decoration: none; color: inherit;">
+                    <div class="mini-card" style="display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem;">
+                        <div class="avatar">{{ c.user.username|first|upper }}</div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                                <strong style="color: #e5e7eb;">{{ c.user.username }}</strong>
+                                {% if c.last_message %}
+                                    <span style="font-size: 0.7rem; color: #6b7280;">
+                                        {{ c.last_message.timestamp|date:"M d, H:i" }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            {% if c.last_message %}
+                                <p style="font-size: 0.85rem; color: #a5b4fc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    {% if c.last_message.sender == user %}You: {% endif %}{{ c.last_message.content|truncatechars:60 }}
+                                </p>
+                            {% else %}
+                                <p style="font-size: 0.85rem; color: #818cf8; font-style: italic;">No messages yet — say hi!</p>
+                            {% endif %}
+                        </div>
+                        {% if c.unread %}
+                            <span style="background: #8b5cf6; color: #fff; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 9999px; min-width: 24px; text-align: center;">{{ c.unread }}</span>
+                        {% endif %}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-box">
+            <p style="color: #a5b4fc; margin-bottom: 0.5rem;">No conversations yet.</p>
+            <a href="{% url 'chat:friends_home' %}" style="color: #a78bfa; text-decoration: none; font-size: 0.875rem;">Add some friends to start messaging →</a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .mini-card {
+        background: rgba(30, 27, 75, 0.5);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        border-radius: 0.6rem;
+        transition: transform 0.15s, border-color 0.15s;
+    }
+    .mini-card:hover {
+        transform: translateX(2px);
+        border-color: rgba(139, 92, 246, 0.5);
+    }
+    .avatar {
+        width: 44px; height: 44px; border-radius: 50%;
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-weight: 700; font-size: 1rem;
+        flex-shrink: 0;
+    }
+    .empty-box {
+        background: rgba(30, 27, 75, 0.35);
+        border: 1px dashed rgba(139, 92, 246, 0.3);
+        border-radius: 0.6rem;
+        padding: 2rem 1rem;
+        text-align: center;
+    }
+</style>
+{% endblock %}

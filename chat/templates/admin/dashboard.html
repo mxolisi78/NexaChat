@@ -1,0 +1,204 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}NexaChat Admin{% endblock %}
+
+{% block content %}
+<div id="content-main" style="padding: 1rem 0;">
+
+    <h1 style="margin-bottom: 1.5rem;">NexaChat Admin</h1>
+
+    <!-- ─── KPI CARDS ─── -->
+    <div class="admin-grid-4">
+        <div class="kpi-card">
+            <div class="kpi-label">Users</div>
+            <div class="kpi-value">{{ total_users }}</div>
+            <div class="kpi-sub">{{ active_users }} active in 24h</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Posts</div>
+            <div class="kpi-value">{{ total_posts }}</div>
+            <div class="kpi-sub">all time</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Messages</div>
+            <div class="kpi-value">{{ total_messages }}</div>
+            <div class="kpi-sub">{{ total_dms }} DMs · {{ total_stories }} stories</div>
+        </div>
+        <div class="kpi-card {% if pending_reports %}urgent{% endif %}">
+            <div class="kpi-label">Pending Reports</div>
+            <div class="kpi-value">{{ pending_reports }}</div>
+            <div class="kpi-sub">
+                {% if pending_reports %}
+                    <a href="/admin/chat/report/?status__exact=pending" style="color: #b91c1c;">Review now →</a>
+                {% else %}
+                    All clear
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── CHARTS ─── -->
+    <div class="admin-grid-2" style="margin-top: 2rem;">
+        <div class="chart-card">
+            <h2 style="margin: 0 0 1rem;">Registrations (last 14 days)</h2>
+            <div class="chart">
+                {% for point in reg_series %}
+                    <div class="bar-wrap" title="{{ point.day|date:'M d' }}: {{ point.count }}">
+                        <div class="bar" style="height: {{ point.pct }}%;"></div>
+                        <div class="bar-label">{{ point.day|date:"j" }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h2 style="margin: 0 0 1rem;">Messages (last 14 days)</h2>
+            <div class="chart">
+                {% for point in msg_series %}
+                    <div class="bar-wrap" title="{{ point.day|date:'M d' }}: {{ point.count }}">
+                        <div class="bar bar-alt" style="height: {{ point.pct }}%;"></div>
+                        <div class="bar-label">{{ point.day|date:"j" }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── LISTS ─── -->
+    <div class="admin-grid-3" style="margin-top: 2rem;">
+
+        <!-- Pending Reports -->
+        <div class="list-card">
+            <h2 style="margin: 0 0 0.75rem;">Pending Reports</h2>
+            {% if recent_reports %}
+                {% for r in recent_reports %}
+                    <div class="list-row">
+                        <div>
+                            <a href="/admin/chat/report/{{ r.id }}/change/">
+                                {{ r.get_reason_display }}
+                            </a>
+                            <div class="list-sub">
+                                {% if r.target_user %}{{ r.target_user.username }}{% endif %}
+                                · by {{ r.reporter.username }}
+                            </div>
+                        </div>
+                        <div class="list-time">{{ r.created_at|timesince }} ago</div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: #666;">No pending reports 🎉</p>
+            {% endif %}
+        </div>
+
+        <!-- Recent Users -->
+        <div class="list-card">
+            <h2 style="margin: 0 0 0.75rem;">Recent Users</h2>
+            {% for u in recent_users %}
+                <div class="list-row">
+                    <div>
+                        <a href="/admin/auth/user/{{ u.id }}/change/">{{ u.username }}</a>
+                        {% if u.email %}<div class="list-sub">{{ u.email }}</div>{% endif %}
+                    </div>
+                    <div class="list-time">{{ u.date_joined|timesince }} ago</div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Recent Posts -->
+        <div class="list-card">
+            <h2 style="margin: 0 0 0.75rem;">Recent Posts</h2>
+            {% for p in recent_posts %}
+                <div class="list-row">
+                    <div>
+                        <a href="/admin/chat/post/{{ p.id }}/change/">
+                            {{ p.content|truncatechars:40 }}
+                        </a>
+                        <div class="list-sub">by {{ p.author.username }}</div>
+                    </div>
+                    <div class="list-time">{{ p.created_at|timesince }} ago</div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .admin-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .admin-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .admin-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    @media (max-width: 900px) {
+        .admin-grid-4, .admin-grid-3, .admin-grid-2 { grid-template-columns: 1fr; }
+    }
+
+    .kpi-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.6rem;
+        padding: 1.25rem;
+    }
+    .kpi-card.urgent { border-color: #fca5a5; background: #fef2f2; }
+    .kpi-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.35rem;
+    }
+    .kpi-value { font-size: 2rem; font-weight: 700; color: #111827; line-height: 1; }
+    .kpi-sub { font-size: 0.8rem; color: #6b7280; margin-top: 0.35rem; }
+
+    .chart-card, .list-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.6rem;
+        padding: 1.25rem;
+    }
+    .chart-card h2, .list-card h2 { font-size: 1rem; font-weight: 600; }
+
+    .chart {
+        display: flex;
+        align-items: flex-end;
+        gap: 0.25rem;
+        height: 140px;
+        padding-top: 0.5rem;
+    }
+    .bar-wrap {
+        flex: 1;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: center;
+    }
+    .bar {
+        width: 100%;
+        max-width: 30px;
+        background: linear-gradient(180deg, #8b5cf6, #6366f1);
+        border-radius: 3px 3px 0 0;
+        min-height: 2px;
+        transition: opacity 0.15s;
+    }
+    .bar-alt { background: linear-gradient(180deg, #ec4899, #db2777); }
+    .bar-wrap:hover .bar { opacity: 0.7; }
+    .bar-label {
+        font-size: 0.65rem;
+        color: #9ca3af;
+        margin-top: 0.35rem;
+    }
+
+    .list-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 0.6rem 0;
+        border-bottom: 1px solid #f3f4f6;
+        gap: 0.5rem;
+    }
+    .list-row:last-child { border-bottom: none; }
+    .list-row a { color: #7c3aed; text-decoration: none; font-weight: 600; }
+    .list-row a:hover { text-decoration: underline; }
+    .list-sub { font-size: 0.75rem; color: #6b7280; margin-top: 0.15rem; }
+    .list-time { font-size: 0.7rem; color: #9ca3af; white-space: nowrap; }
+</style>
+{% endblock %}

@@ -1,0 +1,61 @@
+# ─────────────────────────────────────────────────────────────
+# NexaChat — Local development stack
+# Usage:  docker compose up --build
+# ─────────────────────────────────────────────────────────────
+services:
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nexachat
+      POSTGRES_USER: nexachat
+      POSTGRES_PASSWORD: nexachat_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexachat"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SECRET_KEY: docker-dev-secret-not-for-production
+      DEBUG: "True"
+      ALLOWED_HOSTS: "127.0.0.1,localhost,web"
+      DATABASE_URL: "postgresql://nexachat:nexachat_dev@db:5432/nexachat"
+      REDIS_URL: "redis://redis:6379/0"
+      GNEWS_API_KEY: ""
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - media_data:/app/media
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+volumes:
+  postgres_data:
+  media_data:

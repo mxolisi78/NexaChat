@@ -1,0 +1,224 @@
+﻿{% extends 'chat/base.html' %}
+
+{% block title %}#{{ room.name }} — NexaChat{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; width: 100%;">
+    <div style="margin-bottom: 1.5rem;">
+        <a href="{% url 'chat:room_list' %}" style="color: #a78bfa; text-decoration: none; font-size: 0.875rem;">← Back to rooms</a>
+        <h1 style="font-size: 2rem; margin-top: 0.5rem;"># {{ room.name }}</h1>
+        {% if room.description %}
+            <p style="color: #a5b4fc; font-size: 0.95rem; margin-top: 0.25rem;">{{ room.description }}</p>
+        {% endif %}
+    </div>
+
+    <div id="connection-status" style="font-size: 0.75rem; color: #fbbf24; margin-bottom: 0.75rem;">
+        ⚡ Connecting...
+    </div>
+
+    <div id="message-log" style="background: rgba(30, 27, 75, 0.5); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 0.75rem; padding: 1.5rem; min-height: 300px; max-height: 55vh; overflow-y: auto; margin-bottom: 1rem; display: flex; flex-direction: column;">
+        {% for msg in room_messages %}
+            <div class="message-row{% if msg.author == user %} own{% endif %}">
+                <div class="message-header">
+                    <strong style="color: {% if msg.author == user %}#c4b5fd{% else %}#a5b4fc{% endif %};">{{ msg.author.username }}{% if msg.author == user %} (you){% endif %}</strong>
+                    <span class="message-time">{{ msg.timestamp|date:"M d, H:i" }}</span>
+                </div>
+                <div class="message-body">{{ msg.content }}</div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <form id="message-form" method="post" style="display: flex; gap: 0.5rem; align-items: stretch;">
+        {% csrf_token %}
+        <div style="flex: 1;">
+            {{ form.content }}
+        </div>
+        <button type="submit" id="send-btn" class="btn" style="width: auto; padding: 0.75rem 1.5rem;">Send</button>
+    </form>
+</div>
+
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .message-row {
+        margin-bottom: 1.25rem;
+        animation: fadeIn 0.25s ease-out;
+        max-width: 75%;
+        align-self: flex-start;
+    }
+
+    .message-row.own {
+        align-self: flex-end;
+        text-align: right;
+    }
+
+    .message-header {
+        display: flex;
+        align-items: baseline;
+        gap: 0.75rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .message-row.own .message-header {
+        justify-content: flex-end;
+    }
+
+    .message-time {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
+    .message-body {
+        color: #e5e7eb;
+        line-height: 1.5;
+        word-wrap: break-word;
+        background: rgba(15, 10, 31, 0.5);
+        border-radius: 0.75rem;
+        padding: 0.6rem 0.9rem;
+        border: 1px solid rgba(139, 92, 246, 0.15);
+        text-align: left;
+    }
+
+    .message-row.own .message-body {
+        background: rgba(139, 92, 246, 0.18);
+        border-color: rgba(139, 92, 246, 0.35);
+    }
+
+    .system-message {
+        text-align: center;
+        font-size: 0.75rem;
+        color: #818cf8;
+        margin: 0.75rem 0;
+        font-style: italic;
+        animation: fadeIn 0.25s ease-out;
+        align-self: center;
+    }
+</style>
+
+<script>
+(function() {
+    const roomSlug = "{{ room.slug }}";
+    const currentUser = "{{ user.username }}";
+    const log = document.getElementById('message-log');
+    const form = document.getElementById('message-form');
+    const input = document.getElementById('message-input');
+    const status = document.getElementById('connection-status');
+    const sendBtn = document.getElementById('send-btn');
+
+    const proto = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const wsUrl = proto + window.location.host + '/ws/chat/' + roomSlug + '/';
+
+    const socket = new WebSocket(wsUrl);
+
+    function setConnected(connected) {
+        if (connected) {
+            status.style.color = '#4ade80';
+            status.textContent = '● Connected';
+            sendBtn.disabled = false;
+            sendBtn.style.opacity = '1';
+            sendBtn.style.cursor = 'pointer';
+            input.disabled = false;
+        } else {
+            status.style.color = '#f87171';
+            status.textContent = '● Disconnected — refresh to reconnect';
+            sendBtn.disabled = true;
+            sendBtn.style.opacity = '0.5';
+            sendBtn.style.cursor = 'not-allowed';
+            input.disabled = true;
+        }
+    }
+
+    socket.onopen = function() {
+        setConnected(true);
+        log.scrollTop = log.scrollHeight;
+    };
+
+    socket.onclose = function() { setConnected(false); };
+    socket.onerror = function() { setConnected(false); };
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+
+        if (data.type === 'chat_message') {
+            appendMessage(data.username, data.message, data.timestamp);
+        } else if (data.type === 'user_join') {
+            appendSystem(data.username + ' joined');
+        } else if (data.type === 'user_leave') {
+            appendSystem(data.username + ' left');
+        }
+    };
+
+    function appendMessage(username, text, timestamp) {
+        const isOwn = username === currentUser;
+
+        const row = document.createElement('div');
+        row.className = 'message-row' + (isOwn ? ' own' : '');
+
+        const header = document.createElement('div');
+        header.className = 'message-header';
+
+        const name = document.createElement('strong');
+        name.style.color = isOwn ? '#c4b5fd' : '#a5b4fc';
+        name.textContent = username + (isOwn ? ' (you)' : '');
+
+        const time = document.createElement('span');
+        time.className = 'message-time';
+        time.textContent = timestamp;
+
+        header.appendChild(name);
+        header.appendChild(time);
+
+        const body = document.createElement('div');
+        body.className = 'message-body';
+        body.textContent = text;
+
+        row.appendChild(header);
+        row.appendChild(body);
+
+        log.appendChild(row);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function appendSystem(text) {
+        const div = document.createElement('div');
+        div.className = 'system-message';
+        div.textContent = text;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        sendMessage();
+    });
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        if (socket.readyState !== WebSocket.OPEN) {
+            alert('Not connected. Please refresh the page.');
+            return;
+        }
+
+        socket.send(JSON.stringify({ 'message': text }));
+        input.value = '';
+        input.focus();
+    }
+
+    // Initial state + scroll
+    setConnected(false);
+    log.scrollTop = log.scrollHeight;
+})();
+</script>
+{% endblock %}

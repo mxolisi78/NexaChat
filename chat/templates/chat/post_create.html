@@ -1,0 +1,24 @@
+﻿{% extends 'chat/base.html' %}
+
+{% block title %}New Post — NexaChat{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 560px;">
+    <h1>Create a post</h1>
+    <p class="sub">Share something with your friends.</p>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.content }}
+        <div style="margin: 0.75rem 0;">
+            <label for="{{ form.image.id_for_label }}" style="font-size: 0.875rem; color: #a78bfa;">📷 Attach an image (optional)</label>
+            {{ form.image }}
+        </div>
+        <button type="submit" class="btn">Publish</button>
+    </form>
+
+    <p class="alt-link">
+        <a href="{% url 'chat:feed' %}">← Back to feed</a>
+    </p>
+</div>
+{% endblock %}
