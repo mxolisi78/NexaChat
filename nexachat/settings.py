@@ -250,8 +250,14 @@ if not DEBUG:
 
     CSRF_TRUSTED_ORIGINS = [
         'https://*.onrender.com',
-        'https://nexachat.onrender.com',
+         'https://nexachat-9cfg.onrender.com',
     ]
 
     # Allow Render's URL as host
     ALLOWED_HOSTS = list(ALLOWED_HOSTS) + ['.onrender.com']
+
+    # Always allow these CSRF origins (dev + prod)
+CSRF_TRUSTED_ORIGINS += [
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+]
